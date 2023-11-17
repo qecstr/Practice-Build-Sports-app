@@ -179,6 +179,7 @@ fun SportsAppBar(
     modifier: Modifier = Modifier,
 
 ) {
+    val isShowingDetailPage = windowSize != WindowWidthSizeClass.Expanded && !isShowingListPage
     TopAppBar(
         title = {
             Text(
