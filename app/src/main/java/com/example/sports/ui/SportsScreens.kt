@@ -48,6 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -69,6 +70,7 @@ import com.example.sports.R
 import com.example.sports.data.LocalSportsDataProvider
 import com.example.sports.model.Sport
 import com.example.sports.ui.theme.SportsTheme
+import com.example.sports.utils.SportsContentType
 
 /**
  * Main composable that serves as container
@@ -76,18 +78,39 @@ import com.example.sports.ui.theme.SportsTheme
  */
 @Composable
 fun SportsApp(
+    windowSize: WindowWidthSizeClass,
+    onBackPressed: () -> Unit,
 ) {
     val viewModel: SportsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
+    val contentType = when (windowSize) {
+        WindowWidthSizeClass.Compact,
+        WindowWidthSizeClass.Medium -> SportsContentType.ListOnly
 
+        WindowWidthSizeClass.Expanded -> SportsContentType.ListAndDetail
+        else -> SportsContentType.ListOnly
+    }
     Scaffold(
         topBar = {
             SportsAppBar(
                 isShowingListPage = uiState.isShowingListPage,
-                onBackButtonClick = { viewModel.navigateToListPage() },
+                onBackButtonClick = { viewModel.navigateToListPage()},
+                windowSize = windowSize
             )
         }
     ) { innerPadding ->
+        if(contentType == SportsContentType.ListAndDetail){
+            SportListAndDetails(
+                sports = uiState.sportsList,
+                selectedSport = uiState.currentSport,
+                onClick = {
+                    viewModel.updateCurrentSport(it)
+                },
+                onBackPressed = onBackPressed,
+                contentPadding = innerPadding,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         if (uiState.isShowingListPage) {
             SportsList(
                 sports = uiState.sportsList,
@@ -116,6 +139,34 @@ fun SportsApp(
     }
 }
 
+@Composable
+fun SportListAndDetails  (
+        sports: List<Sport>,
+        selectedSport: Sport,
+        onClick: (Sport) -> Unit,
+        onBackPressed: () -> Unit,
+        modifier: Modifier = Modifier,
+        contentPadding: PaddingValues = PaddingValues(0.dp),
+                    ) {
+    Row(
+        modifier = modifier
+    ) {
+        SportsList(
+            sports = sports,
+            onClick = onClick,
+            contentPadding = contentPadding,
+            modifier = Modifier
+                .weight(2f)
+                .padding(horizontal = dimensionResource(R.dimen.padding_medium))
+        )
+        SportsDetail(
+            selectedSport = selectedSport,
+            modifier = Modifier.weight(3f),
+            contentPadding = contentPadding,
+            onBackPressed = onBackPressed,
+        )
+    }
+}
 /**
  * Composable that displays the topBar and displays back button if back navigation is possible.
  */
@@ -124,7 +175,9 @@ fun SportsApp(
 fun SportsAppBar(
     onBackButtonClick: () -> Unit,
     isShowingListPage: Boolean,
-    modifier: Modifier = Modifier
+    windowSize: WindowWidthSizeClass,
+    modifier: Modifier = Modifier,
+
 ) {
     TopAppBar(
         title = {
